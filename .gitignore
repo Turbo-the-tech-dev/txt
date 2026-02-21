@@ -1,0 +1,27 @@
+# Node modules
+node_modules/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Large media files
+*.mp4
+*.mp3
+*.jpg
+*.png
+*.gif
+
+# Database files
+*.db
+*.sqlite
