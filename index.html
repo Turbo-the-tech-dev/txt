@@ -5,8 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>txt — Turbo Fleet Command</title>
 <style>
+html{scroll-behavior:smooth}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;line-height:1.6}
+.skip-link{position:absolute;top:-40px;left:0;background:#58a6ff;color:#0d1117;padding:8px;z-index:100;transition:top .2s;text-decoration:none;border-radius:0 0 6px 0;font-weight:600}
+.skip-link:focus{top:0}
 .container{max-width:900px;margin:0 auto;padding:2rem 1.5rem}
 header{border-bottom:1px solid #21262d;padding-bottom:1.5rem;margin-bottom:2rem}
 h1{color:#58a6ff;font-size:2rem;font-weight:600;margin-bottom:.5rem}
@@ -36,33 +39,43 @@ h1{color:#58a6ff;font-size:2rem;font-weight:600;margin-bottom:.5rem}
 footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid #21262d;text-align:center;color:#484f58;font-size:.85rem}
 footer a{color:#58a6ff;text-decoration:none}
 @media(max-width:600px){.container{padding:1rem}.content{padding:1rem}h1{font-size:1.5rem}}
+.loading{animation:pulse 1.5s infinite ease-in-out;color:#8b949e;text-align:center;padding:3rem}
+@keyframes pulse{0%{opacity:.4}50%{opacity:1}100%{opacity:.4}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
 </head>
 <body>
+<a href="#readme-content" class="skip-link">Skip to content</a>
 <div class="container">
 <header>
 <h1>txt</h1>
 <div>
-<span class="badge" style="background:#8b949e">📁 Meta</span><span class="badge fleet">Turbo Fleet</span>
+<span class="badge" style="background:#6e7681" aria-label="Meta documentation"><span aria-hidden="true">📁</span> Meta</span><span class="badge fleet" aria-label="Part of Turbo Fleet">Turbo Fleet</span>
 </div>
 <p class="description">Text documentation archive from The Galaxy project</p>
 <div class="links">
-<a href="https://github.com/Turbo-the-tech-dev/txt">GitHub Repo</a>
-<a href="https://github.com/Turbo-the-tech-dev">Turbo Fleet Command</a>
+<a href="https://github.com/Turbo-the-tech-dev/txt" target="_blank" rel="noopener noreferrer" aria-label="GitHub Repo (opens in a new tab)">GitHub Repo</a>
+<a href="https://github.com/Turbo-the-tech-dev" target="_blank" rel="noopener noreferrer" aria-label="Turbo Fleet Command (opens in a new tab)">Turbo Fleet Command</a>
 </div>
 </header>
-<div class="content" id="readme-content">Loading...</div>
+<div class="content loading" id="readme-content">Loading...</div>
 <footer>
-<p>Part of <a href="https://github.com/Turbo-the-tech-dev">Turbo Fleet Command</a> · Powered by GitHub Pages</p>
+<p>Part of <a href="https://github.com/Turbo-the-tech-dev" target="_blank" rel="noopener noreferrer" aria-label="Turbo Fleet Command (opens in a new tab)">Turbo Fleet Command</a> · Powered by GitHub Pages</p>
 </footer>
 </div>
 <script>
 const readme = document.getElementById('readme-content');
 fetch('README.md')
 .then(r => r.ok ? r.text() : Promise.reject('No README'))
-.then(md => { readme.innerHTML = marked.parse(md); })
-.catch(() => { readme.innerHTML = '<p>Documentation coming soon.</p>'; });
+.then(md => {
+  readme.classList.remove('loading');
+  readme.innerHTML = DOMPurify.sanitize(marked.parse(md));
+})
+.catch(() => {
+  readme.classList.remove('loading');
+  readme.innerHTML = '<p>Documentation coming soon.</p>';
+});
 </script>
 </body>
 </html>
