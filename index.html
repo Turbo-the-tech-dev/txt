@@ -35,26 +35,31 @@ h1{color:#58a6ff;font-size:2rem;font-weight:600;margin-bottom:.5rem}
 .content img{max-width:100%;border-radius:6px;margin:.5rem 0}
 footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid #21262d;text-align:center;color:#484f58;font-size:.85rem}
 footer a{color:#58a6ff;text-decoration:none}
+.skip-link{position:absolute;top:-40px;left:0;background:#58a6ff;color:#0d1117;padding:8px;z-index:100;transition:top .2s;text-decoration:none;border-radius:0 0 6px 0;font-weight:600}
+.skip-link:focus{top:0}
 @media(max-width:600px){.container{padding:1rem}.content{padding:1rem}h1{font-size:1.5rem}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
+<a href="#readme-content" class="skip-link">Skip to content</a>
 <div class="container">
 <header>
 <h1>txt</h1>
 <div>
-<span class="badge" style="background:#8b949e">📁 Meta</span><span class="badge fleet">Turbo Fleet</span>
+<span class="badge" style="background:#6e7681">📁 Meta</span><span class="badge fleet">Turbo Fleet</span>
 </div>
 <p class="description">Text documentation archive from The Galaxy project</p>
 <div class="links">
-<a href="https://github.com/Turbo-the-tech-dev/txt">GitHub Repo</a>
-<a href="https://github.com/Turbo-the-tech-dev">Turbo Fleet Command</a>
+<a href="https://github.com/Turbo-the-tech-dev/txt" target="_blank" rel="noopener noreferrer" aria-label="Visit the GitHub repository for txt (opens in a new tab)">GitHub Repo</a>
+<a href="https://github.com/Turbo-the-tech-dev" target="_blank" rel="noopener noreferrer" aria-label="Visit the Turbo Fleet Command GitHub profile (opens in a new tab)">Turbo Fleet Command</a>
 </div>
 </header>
+<main>
 <div class="content" id="readme-content">Loading...</div>
+</main>
 <footer>
-<p>Part of <a href="https://github.com/Turbo-the-tech-dev">Turbo Fleet Command</a> · Powered by GitHub Pages</p>
+<p>Part of <a href="https://github.com/Turbo-the-tech-dev" target="_blank" rel="noopener noreferrer" aria-label="Visit the Turbo Fleet Command GitHub profile (opens in a new tab)">Turbo Fleet Command</a> · Powered by GitHub Pages</p>
 </footer>
 </div>
 <script>
