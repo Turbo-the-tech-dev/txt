@@ -13,6 +13,7 @@ h1{color:#58a6ff;font-size:2rem;font-weight:600;margin-bottom:.5rem}
 .badge{display:inline-block;background:#1f6feb;color:#fff;padding:.2rem .6rem;border-radius:12px;font-size:.75rem;margin-right:.5rem;margin-bottom:.5rem}
 .badge.fleet{background:#238636}
 .badge.tech{background:#8b5cf6}
+.badge.meta{background:#6e7681}
 .description{color:#8b949e;font-size:1.1rem;margin-top:.75rem}
 .links{margin-top:1rem;display:flex;gap:.75rem;flex-wrap:wrap}
 .links a{color:#58a6ff;text-decoration:none;padding:.4rem .8rem;border:1px solid #30363d;border-radius:6px;font-size:.85rem;transition:all .2s}
@@ -25,7 +26,10 @@ h1{color:#58a6ff;font-size:2rem;font-weight:600;margin-bottom:.5rem}
 .content ul,.content ol{margin:.5rem 0 .5rem 1.5rem}
 .content li{margin:.3rem 0;color:#c9d1d9}
 .content code{background:#1f2937;padding:.15rem .4rem;border-radius:4px;font-size:.9em;color:#f0883e}
-.content pre{background:#1f2937;padding:1rem;border-radius:6px;overflow-x:auto;margin:.75rem 0}
+.content pre{background:#1f2937;padding:1rem;border-radius:6px;overflow-x:auto;margin:.75rem 0;position:relative}
+.copy-btn{position:absolute;top:.5rem;right:.5rem;background:#30363d;color:#c9d1d9;border:1px solid #21262d;padding:.2rem .5rem;border-radius:4px;font-size:.7rem;cursor:pointer;opacity:0;transition:opacity .2s}
+.content pre:hover .copy-btn, .copy-btn:focus{opacity:1}
+.copy-btn:hover{background:#3fb950;color:#fff;border-color:#3fb950}
 .content pre code{background:none;padding:0;color:#c9d1d9}
 .content a{color:#58a6ff}
 .content blockquote{border-left:3px solid #3fb950;padding-left:1rem;margin:.75rem 0;color:#8b949e}
@@ -33,10 +37,11 @@ h1{color:#58a6ff;font-size:2rem;font-weight:600;margin-bottom:.5rem}
 .content th,.content td{padding:.5rem .75rem;border:1px solid #21262d;text-align:left}
 .content th{background:#1f2937;color:#58a6ff}
 .content img{max-width:100%;border-radius:6px;margin:.5rem 0}
-footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid #21262d;text-align:center;color:#484f58;font-size:.85rem}
+footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid #21262d;text-align:center;color:#8b949e;font-size:.85rem}
 footer a{color:#58a6ff;text-decoration:none}
 .skip-link{position:absolute;top:-40px;left:0;background:#58a6ff;color:#0d1117;padding:8px;z-index:100;transition:top .2s;text-decoration:none;border-radius:0 0 6px 0;font-weight:600}
 .skip-link:focus{top:0}
+a:focus-visible{outline:2px solid #58a6ff;outline-offset:2px;border-radius:4px}
 @media(max-width:600px){.container{padding:1rem}.content{padding:1rem}h1{font-size:1.5rem}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -47,7 +52,7 @@ footer a{color:#58a6ff;text-decoration:none}
 <header>
 <h1>txt</h1>
 <div>
-<span class="badge" style="background:#6e7681">📁 Meta</span><span class="badge fleet">Turbo Fleet</span>
+<span class="badge meta">📁 Meta</span><span class="badge fleet">Turbo Fleet</span>
 </div>
 <p class="description">Text documentation archive from The Galaxy project</p>
 <div class="links">
@@ -66,7 +71,31 @@ footer a{color:#58a6ff;text-decoration:none}
 const readme = document.getElementById('readme-content');
 fetch('README.md')
 .then(r => r.ok ? r.text() : Promise.reject('No README'))
-.then(md => { readme.innerHTML = marked.parse(md); })
+.then(md => {
+  readme.innerHTML = marked.parse(md);
+  // Post-process links
+  readme.querySelectorAll('a').forEach(link => {
+    if (link.hostname !== window.location.hostname && link.hostname !== '') {
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+    }
+  });
+  // Add copy buttons
+  readme.querySelectorAll('pre').forEach(pre => {
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    btn.setAttribute('aria-label', 'Copy code to clipboard');
+    btn.onclick = () => {
+      const code = pre.querySelector('code').innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+      });
+    };
+    pre.appendChild(btn);
+  });
+})
 .catch(() => { readme.innerHTML = '<p>Documentation coming soon.</p>'; });
 </script>
 </body>
