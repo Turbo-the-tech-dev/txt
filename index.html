@@ -25,8 +25,10 @@ h1{color:#58a6ff;font-size:2rem;font-weight:600;margin-bottom:.5rem}
 .content ul,.content ol{margin:.5rem 0 .5rem 1.5rem}
 .content li{margin:.3rem 0;color:#c9d1d9}
 .content code{background:#1f2937;padding:.15rem .4rem;border-radius:4px;font-size:.9em;color:#f0883e}
-.content pre{background:#1f2937;padding:1rem;border-radius:6px;overflow-x:auto;margin:.75rem 0}
+.content pre{background:#1f2937;padding:1rem;border-radius:6px;overflow-x:auto;margin:.75rem 0;position:relative}
 .content pre code{background:none;padding:0;color:#c9d1d9}
+.copy-btn{position:absolute;top:8px;right:8px;padding:.2rem .6rem;background:#30363d;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;font-size:.75rem;cursor:pointer;opacity:0;transition:opacity .2s;z-index:10}
+.content pre:hover .copy-btn,.copy-btn:focus{opacity:1}
 .content a{color:#58a6ff}
 .content blockquote{border-left:3px solid #3fb950;padding-left:1rem;margin:.75rem 0;color:#8b949e}
 .content table{width:100%;border-collapse:collapse;margin:.75rem 0}
@@ -66,7 +68,30 @@ footer a{color:#58a6ff;text-decoration:none}
 const readme = document.getElementById('readme-content');
 fetch('README.md')
 .then(r => r.ok ? r.text() : Promise.reject('No README'))
-.then(md => { readme.innerHTML = marked.parse(md); })
+.then(md => {
+    readme.innerHTML = marked.parse(md);
+    document.querySelectorAll('pre').forEach(pre => {
+        const btn = document.createElement('button');
+        btn.className = 'copy-btn';
+        btn.textContent = 'Copy';
+        btn.onclick = () => {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(pre.querySelector('code').innerText).then(() => {
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => btn.textContent = 'Copy', 2000);
+                });
+            } else {
+                btn.textContent = 'Error';
+                setTimeout(() => btn.textContent = 'Copy', 2000);
+            }
+        };
+        pre.appendChild(btn);
+    });
+    document.querySelectorAll('#readme-content a[href^="http"]').forEach(a => {
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+    });
+})
 .catch(() => { readme.innerHTML = '<p>Documentation coming soon.</p>'; });
 </script>
 </body>
