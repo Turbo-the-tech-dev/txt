@@ -27,6 +27,10 @@ h1{color:#58a6ff;font-size:2rem;font-weight:600;margin-bottom:.5rem}
 .content code{background:#1f2937;padding:.15rem .4rem;border-radius:4px;font-size:.9em;color:#f0883e}
 .content pre{background:#1f2937;padding:1rem;border-radius:6px;overflow-x:auto;margin:.75rem 0}
 .content pre code{background:none;padding:0;color:#c9d1d9}
+.code-wrapper{position:relative}
+.copy-btn{position:absolute;top:.5rem;right:.5rem;background:#30363d;color:#c9d1d9;border:1px solid #f0f6fc1a;border-radius:6px;padding:.3rem .6rem;font-size:.75rem;cursor:pointer;opacity:0;transition:opacity .2s,background .2s}
+.code-wrapper:hover .copy-btn,.copy-btn:focus{opacity:1}
+.copy-btn:hover{background:#3fb950;color:#fff}
 .content a{color:#58a6ff}
 .content blockquote{border-left:3px solid #3fb950;padding-left:1rem;margin:.75rem 0;color:#8b949e}
 .content table{width:100%;border-collapse:collapse;margin:.75rem 0}
@@ -64,9 +68,38 @@ footer a{color:#58a6ff;text-decoration:none}
 </div>
 <script>
 const readme = document.getElementById('readme-content');
+
+function postProcessContent() {
+  document.querySelectorAll('#readme-content pre').forEach(pre => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'code-wrapper';
+    pre.parentNode.insertBefore(wrapper, pre);
+    wrapper.appendChild(pre);
+
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    btn.setAttribute('aria-label', 'Copy code to clipboard');
+    wrapper.appendChild(btn);
+
+    let timeout;
+    btn.addEventListener('click', () => {
+      const code = pre.querySelector('code').innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        btn.textContent = 'Copied!';
+        clearTimeout(timeout);
+        timeout = setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+      });
+    });
+  });
+}
+
 fetch('README.md')
 .then(r => r.ok ? r.text() : Promise.reject('No README'))
-.then(md => { readme.innerHTML = marked.parse(md); })
+.then(md => {
+  readme.innerHTML = marked.parse(md);
+  postProcessContent();
+})
 .catch(() => { readme.innerHTML = '<p>Documentation coming soon.</p>'; });
 </script>
 </body>
