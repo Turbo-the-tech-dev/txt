@@ -2,6 +2,17 @@
 
 Text documentation files from The Galaxy project.
 
+## Quick Reference
+
+```bash
+# Clone the repository
+git clone https://github.com/Turbo-the-tech-dev/txt.git
+
+# Explore the documentation
+cd txt/docs
+ls -F
+```
+
 ## Directory Structure
 
 - `docs/` - Documentation files (Git tutorials, backup reports, indexes)
