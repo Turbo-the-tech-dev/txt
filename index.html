@@ -33,6 +33,13 @@ h1{color:#58a6ff;font-size:2rem;font-weight:600;margin-bottom:.5rem}
 .content th,.content td{padding:.5rem .75rem;border:1px solid #21262d;text-align:left}
 .content th{background:#1f2937;color:#58a6ff}
 .content img{max-width:100%;border-radius:6px;margin:.5rem 0}
+.code-wrapper{position:relative}
+.copy-btn{position:absolute;top:.5rem;right:.5rem;background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:6px;padding:.2rem .5rem;font-size:.75rem;cursor:pointer;opacity:0;transition:opacity .2s,background-color .2s}
+.code-wrapper:hover .copy-btn,.copy-btn:focus{opacity:1}
+.copy-btn:hover{background-color:#30363d;border-color:#8b949e}
+.copy-btn:active{background-color:#282e33}
+#readme-content{opacity:0;transition:opacity .5s ease-in-out}
+#readme-content.loaded{opacity:1}
 footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid #21262d;text-align:center;color:#484f58;font-size:.85rem}
 footer a{color:#58a6ff;text-decoration:none}
 .skip-link{position:absolute;top:-40px;left:0;background:#58a6ff;color:#0d1117;padding:8px;z-index:100;transition:top .2s;text-decoration:none;border-radius:0 0 6px 0;font-weight:600}
@@ -64,10 +71,46 @@ footer a{color:#58a6ff;text-decoration:none}
 </div>
 <script>
 const readme = document.getElementById('readme-content');
+
+function addCopyButtons() {
+    document.querySelectorAll('pre').forEach(pre => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'code-wrapper';
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const button = document.createElement('button');
+        button.className = 'copy-btn';
+        button.setAttribute('aria-label', 'Copy code to clipboard');
+        button.innerText = 'Copy';
+
+        button.addEventListener('click', () => {
+            const code = pre.querySelector('code')?.innerText || pre.innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                button.innerText = 'Copied!';
+                button.classList.add('copied');
+                setTimeout(() => {
+                    button.innerText = 'Copy';
+                    button.classList.remove('copied');
+                }, 2000);
+            });
+        });
+
+        wrapper.appendChild(button);
+    });
+}
+
 fetch('README.md')
 .then(r => r.ok ? r.text() : Promise.reject('No README'))
-.then(md => { readme.innerHTML = marked.parse(md); })
-.catch(() => { readme.innerHTML = '<p>Documentation coming soon.</p>'; });
+.then(md => {
+    readme.innerHTML = marked.parse(md);
+    addCopyButtons();
+    readme.classList.add('loaded');
+})
+.catch(() => {
+    readme.innerHTML = '<p>Documentation coming soon.</p>';
+    readme.classList.add('loaded');
+});
 </script>
 </body>
 </html>
