@@ -35,6 +35,9 @@ h1{color:#58a6ff;font-size:2rem;font-weight:600;margin-bottom:.5rem}
 .content img{max-width:100%;border-radius:6px;margin:.5rem 0}
 footer{margin-top:3rem;padding-top:1.5rem;border-top:1px solid #21262d;text-align:center;color:#484f58;font-size:.85rem}
 footer a{color:#58a6ff;text-decoration:none}
+.code-wrapper{position:relative}
+.copy-btn{position:absolute;top:.5rem;right:.5rem;background:#21262d;border:1px solid #30363d;color:#c9d1d9;border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer;opacity:0;transition:opacity .2s;z-index:10}
+.code-wrapper:hover .copy-btn,.copy-btn:focus{opacity:1}
 .skip-link{position:absolute;top:-40px;left:0;background:#58a6ff;color:#0d1117;padding:8px;z-index:100;transition:top .2s;text-decoration:none;border-radius:0 0 6px 0;font-weight:600}
 .skip-link:focus{top:0}
 @media(max-width:600px){.container{padding:1rem}.content{padding:1rem}h1{font-size:1.5rem}}
@@ -66,7 +69,26 @@ footer a{color:#58a6ff;text-decoration:none}
 const readme = document.getElementById('readme-content');
 fetch('README.md')
 .then(r => r.ok ? r.text() : Promise.reject('No README'))
-.then(md => { readme.innerHTML = marked.parse(md); })
+.then(md => {
+  readme.innerHTML = marked.parse(md);
+  readme.querySelectorAll('pre').forEach(pre => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'code-wrapper';
+    pre.parentNode.insertBefore(wrapper, pre);
+    wrapper.appendChild(pre);
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    btn.setAttribute('aria-label', 'Copy code to clipboard');
+    wrapper.appendChild(btn);
+    btn.onclick = () => {
+      navigator.clipboard.writeText(pre.textContent).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 2000);
+      }).catch(err => console.error('Failed to copy: ', err));
+    };
+  });
+})
 .catch(() => { readme.innerHTML = '<p>Documentation coming soon.</p>'; });
 </script>
 </body>
