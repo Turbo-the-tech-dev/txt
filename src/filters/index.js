@@ -46,7 +46,7 @@ function applyFilters(text, filterNames) {
  */
 function filter(args) {
   const { parseFile } = require('../parser');
-  const { logger } = require('../utils/logger');
+  const { logger } = require('../utils');
 
   const inputFile = args._[1];
   const filterType = args.type || args.t;
