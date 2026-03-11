@@ -1,0 +1,41 @@
+{
+  "name": "txt",
+  "version": "0.1.0",
+  "description": "A powerful text parsing and transformation CLI tool",
+  "main": "bin/txt",
+  "bin": {
+    "txt": "./bin/txt"
+  },
+  "scripts": {
+    "start": "node bin/txt",
+    "test": "node tests/unit/parser.test.js && node tests/unit/filters.test.js && node tests/integration/cli.test.js",
+    "test:unit": "node tests/unit/*.test.js",
+    "test:integration": "node tests/integration/*.test.js",
+    "lint": "eslint src/ bin/ tests/",
+    "build": "echo 'No build step required for vanilla JS'"
+  },
+  "keywords": [
+    "cli",
+    "text",
+    "parser",
+    "transform",
+    "filter",
+    "text-processing"
+  ],
+  "author": "Turbo-the-tech-dev",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Turbo-the-tech-dev/txt.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Turbo-the-tech-dev/txt/issues"
+  },
+  "homepage": "https://github.com/Turbo-the-tech-dev/txt#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
+  }
+}

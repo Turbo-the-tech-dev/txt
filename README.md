@@ -1,88 +1,123 @@
 # txt
 
-> 📁 Text documentation archive from **The Galaxy** project — Turbo Fleet Command
+> 📝 A powerful text parsing and transformation CLI tool
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![GitHub Pages](https://img.shields.io/badge/GitHub-Pages-blue)](https://turbo-the-tech-dev.github.io/txt/)
+[![Build Status](https://github.com/Turbo-the-tech-dev/txt/actions/workflows/ci.yml/badge.svg)](https://github.com/Turbo-the-tech-dev/txt/actions)
 
 ---
 
 ## 📖 Overview
 
-This repository contains curated text documentation exported from **The Galaxy** — a large-scale development environment spanning Motorola Android devices, Termux, and Ubuntu proot distributions.
-
-The documentation covers:
-- Git backup workflows and audit reports
-- Repository management and organization
-- GitHub repository indexes
-- Termux/Proot setup guides
-- Project structure documentation
-
----
-
-## 📂 Directory Structure
-
-```
-txt/
-├── index.html              # GitHub Pages landing page
-├── README.md               # This file
-├── .gitignore              # Git ignore rules
-└── docs/                   # Documentation files
-    ├── GALAXY_INDEX.md           # Master index of The Galaxy project
-    ├── GIT_BACKUP_AUDIT_REPORT.md # Detailed backup audit (1475 repos scanned)
-    ├── GIT_BACKUP_SUMMARY.md      # Executive summary of backup status
-    ├── GITHUB_REPOS.md            # GitHub repositories index (171 unique repos)
-    ├── REPOS.md                   # Curated list of Turbo-the-tech-dev repos
-    ├── TERMUX_PROOT_NOTICE.md     # Termux + proot-distro setup guide
-    └── qwen-code-export-*.md      # AI session exports
-```
+`txt` is a command-line tool for parsing, filtering, and transforming text files. Built for developers who need fast, reliable text processing in their workflows.
 
 ---
 
 ## 🚀 Quick Start
 
-### View Documentation Online
-
-Visit the **GitHub Pages** site: [turbo-the-tech-dev.github.io/txt](https://turbo-the-tech-dev.github.io/txt/)
-
-### Clone Locally
+### Installation
 
 ```bash
+# Clone the repository
 git clone https://github.com/Turbo-the-tech-dev/txt.git
 cd txt
+
+# Install dependencies
+npm install  # or pip install -r requirements.txt
+
+# Run the CLI
+./bin/txt --help
 ```
 
-### Browse Documentation
+### Basic Usage
 
-| Document | Description |
-|----------|-------------|
-| [`GALAXY_INDEX.md`](docs/GALAXY_INDEX.md) | Master directory structure and cleanup guide |
-| [`GIT_BACKUP_SUMMARY.md`](docs/GIT_BACKUP_SUMMARY.md) | Executive summary: 1475 repos, 58% need attention |
-| [`GIT_BACKUP_AUDIT_REPORT.md`](docs/GIT_BACKUP_AUDIT_REPORT.md) | Full audit with repo-by-repo breakdown |
-| [`GITHUB_REPOS.md`](docs/GITHUB_REPOS.md) | Index of 171 GitHub repositories |
-| [`REPOS.md`](docs/REPOS.md) | Curated list of original projects and forks |
-| [`TERMUX_PROOT_NOTICE.md`](docs/TERMUX_PROOT_NOTICE.md) | Termux + proot-distro setup for Claude Code |
+```bash
+# Parse a text file
+txt parse input.txt
 
----
+# Apply filters
+txt filter --type uppercase input.txt
 
-## 📊 Key Statistics
-
-| Metric | Value |
-|--------|-------|
-| **Total Repositories Scanned** | 1,475 |
-| **GitHub Remotes** | 171 unique repos |
-| **Fully Synced to GitHub** | 747 (51%) |
-| **Requires Attention** | 856 (58%) |
-| **Primary GitHub User** | [@Turbo-the-tech-dev](https://github.com/Turbo-the-tech-dev) |
+# Transform with custom rules
+txt transform --config config.yaml input.txt
+```
 
 ---
 
-## 🛠️ Related Projects
+## 📂 Project Structure
 
-- **[The Galaxy](https://github.com/Turbo-the-tech-dev)** — Main command center project
-- **[Electrician](https://github.com/Turbo-the-tech-dev/Electrician)** — Electrician trade resources
-- **[DEATHSTAR](https://github.com/Turbo-the-tech-dev/DEATHSTAR)** — Directory structure tools
-- **[ETHICAL_ARCH](https://github.com/Turbo-the-tech-dev/ETHICAL_ARCH)** — Security documentation
+```
+txt/
+├── .github/              # GitHub Actions (CI/CD) & Issue Templates
+│   └── workflows/        # Automation scripts (e.g., auto-labeler)
+├── bin/                  # Executable binaries or entry-point scripts
+│   └── txt               # The main CLI entry
+├── src/                  # Core logic (The Engine)
+│   ├── parser/           # Text parsing logic
+│   ├── filters/          # Text transformation modules
+│   └── utils/            # Helper functions (logging, file I/O)
+├── tests/                # Full test suite
+│   ├── unit/             # Testing individual functions
+│   └── integration/      # Testing the full CLI flow
+├── docs/                 # Extended documentation & API specs
+├── .env.example          # Template for environment variables
+├── .gitignore            # Ignoring node_modules, __pycache__, etc.
+├── LICENSE               # Legal protection
+└── README.md             # The project "Front Door"
+```
+
+---
+
+## 🛠️ Features
+
+- **Fast Parsing** — Efficient text parsing with minimal memory footprint
+- **Flexible Filters** — Built-in and custom filter support
+- **CLI-First Design** — Works seamlessly in pipelines and scripts
+- **Extensible** — Plugin architecture for custom transformations
+- **Tested** — Comprehensive unit and integration test coverage
+
+---
+
+## 📋 Commands
+
+| Command | Description |
+|---------|-------------|
+| `txt parse` | Parse text files into structured output |
+| `txt filter` | Apply text filters (uppercase, lowercase, trim, etc.) |
+| `txt transform` | Transform text using custom rules |
+| `txt validate` | Validate text against schemas |
+| `txt --help` | Show help information |
+
+---
+
+## 🔧 Configuration
+
+Create a `config.yaml` file:
+
+```yaml
+parser:
+  encoding: utf-8
+  line_ending: unix
+
+filters:
+  - name: trim
+  - name: uppercase
+```
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+npm test  # or pytest
+
+# Run unit tests only
+npm run test:unit
+
+# Run integration tests only
+npm run test:integration
+```
 
 ---
 
@@ -95,9 +130,9 @@ MIT License — See [LICENSE](LICENSE) for details.
 ## 🔗 Links
 
 - [GitHub Repository](https://github.com/Turbo-the-tech-dev/txt)
-- [Turbo Fleet Command Profile](https://github.com/Turbo-the-tech-dev)
-- [GitHub Pages Site](https://turbo-the-tech-dev.github.io/txt/)
+- [Issue Tracker](https://github.com/Turbo-the-tech-dev/txt/issues)
+- [Documentation](docs/)
 
 ---
 
-*Part of **Turbo Fleet Command** — Bridging the gap between electrical trades and technology.*
+*Built with ⚡ by [Turbo-the-tech-dev](https://github.com/Turbo-the-tech-dev)*

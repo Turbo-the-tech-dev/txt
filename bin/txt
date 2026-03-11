@@ -1,0 +1,115 @@
+#!/usr/bin/env node
+/**
+ * txt - Text parsing and transformation CLI
+ * 
+ * Usage:
+ *   txt <command> [options] <input>
+ * 
+ * Commands:
+ *   parse      Parse text files into structured output
+ *   filter     Apply text filters
+ *   transform  Transform text using custom rules
+ *   validate   Validate text against schemas
+ *   help       Show help information
+ */
+
+const { parseArgs } = require('../src/utils/args.js');
+const { parse } = require('../src/parser/index.js');
+const { filter } = require('../src/filters/index.js');
+const { transform } = require('../src/transform/index.js');
+const { logger } = require('../src/utils/logger.js');
+
+const VERSION = '0.1.0';
+
+function showHelp() {
+  console.log(`
+txt - Text parsing and transformation CLI
+
+Usage:
+  txt <command> [options] <input>
+
+Commands:
+  parse      Parse text files into structured output
+  filter     Apply text filters (uppercase, lowercase, trim, etc.)
+  transform  Transform text using custom rules
+  validate   Validate text against schemas
+  help       Show this help message
+
+Options:
+  -v, --version    Show version number
+  -h, --help       Show help
+  -c, --config     Path to config file
+  -o, --output     Output file path
+  --verbose        Enable verbose logging
+
+Examples:
+  txt parse input.txt
+  txt filter --type uppercase input.txt
+  txt transform --config config.yaml input.txt
+
+For more information, visit: https://github.com/Turbo-the-tech-dev/txt
+`);
+}
+
+function showVersion() {
+  console.log(`txt v${VERSION}`);
+}
+
+function main() {
+  const args = parseArgs(process.argv.slice(2));
+
+  if (args.help || args.h) {
+    showHelp();
+    process.exit(0);
+  }
+
+  if (args.version || args.v) {
+    showVersion();
+    process.exit(0);
+  }
+
+  const command = args._[0];
+
+  if (!command) {
+    showHelp();
+    process.exit(1);
+  }
+
+  try {
+    switch (command) {
+      case 'parse':
+        parse(args);
+        break;
+      case 'filter':
+        filter(args);
+        break;
+      case 'transform':
+        transform(args);
+        break;
+      case 'validate':
+        // TODO: Implement validate
+        logger.info('Validate command coming soon...');
+        break;
+      case 'help':
+        showHelp();
+        break;
+      default:
+        logger.error(`Unknown command: ${command}`);
+        showHelp();
+        process.exit(1);
+    }
+  } catch (error) {
+    logger.error(error.message);
+    if (args.verbose) {
+      console.error(error.stack);
+    }
+    process.exit(1);
+  }
+}
+
+module.exports = { main, showHelp, showVersion };
+
+// Run if called directly
+if (require.main === module) {
+  main();
+}
