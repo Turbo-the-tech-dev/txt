@@ -12,14 +12,14 @@ const path = require('path');
  * @returns {Object} Parsed content
  */
 function parseFile(filePath, options = {}) {
-  const { encoding = 'utf-8', lineEnding = 'unix' } = options;
+  const { encoding = 'utf-8' } = options;
 
   if (!fs.existsSync(filePath)) {
     throw new Error(`File not found: ${filePath}`);
   }
 
   const content = fs.readFileSync(filePath, encoding);
-  const lines = normalizeLineEndings(content, lineEnding);
+  const lines = normalizeLineEndings(content);
 
   return {
     path: path.resolve(filePath),
@@ -31,12 +31,11 @@ function parseFile(filePath, options = {}) {
 }
 
 /**
- * Normalize line endings based on option
+ * Normalize line endings
  * @param {string} content - File content
- * @param {string} lineEnding - 'unix', 'windows', or 'old-mac'
  * @returns {string[]} Array of lines
  */
-function normalizeLineEndings(content, lineEnding = 'unix') {
+function normalizeLineEndings(content) {
   const normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   return normalized.split('\n');
 }
