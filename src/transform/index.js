@@ -2,9 +2,11 @@
  * Transform module - Text transformation engine
  */
 
+const path = require('path');
 const { parseFile } = require('../parser');
 const { applyFilters } = require('../filters');
 const { logger, writeFile } = require('../utils');
+const { loadConfig } = require('../utils/config');
 
 /**
  * Transform command handler
@@ -19,19 +21,15 @@ function transform(args) {
     process.exit(1);
   }
 
-  let config = { filters: [] };
+  let config = { filters: ['trim'] };
 
   if (configFile) {
-    const fs = require('fs');
-    if (!fs.existsSync(configFile)) {
-      logger.error(`Config file not found: ${configFile}`);
+    try {
+      config = loadConfig(configFile);
+    } catch (error) {
+      logger.error(`Failed to parse config: ${error.message}`);
       process.exit(1);
     }
-    
-    // Simple YAML-like config parsing (for demo)
-    const configContent = fs.readFileSync(configFile, 'utf-8');
-    // TODO: Implement proper YAML parsing
-    config = JSON.parse(configContent.replace(/(\w+):/g, '"$1":'));
   }
 
   const parsed = parseFile(inputFile);
@@ -49,6 +47,59 @@ function transform(args) {
   }
 }
 
+/**
+ * Batch transform multiple files
+ * @param {Object} args - Command line arguments
+ */
+function batchTransform(args) {
+  const configPath = args.config || args.c;
+  const files = args._.slice(1);
+
+  if (!configPath) {
+    logger.error('Config file required for batch transform (--config)');
+    process.exit(1);
+  }
+
+  if (files.length === 0) {
+    logger.error('At least one input file required');
+    process.exit(1);
+  }
+
+  let config;
+  try {
+    config = loadConfig(configPath);
+  } catch (error) {
+    logger.error(`Failed to parse config: ${error.message}`);
+    process.exit(1);
+  }
+
+  const filterNames = config.filters || ['trim'];
+  const outputDir = args.output || args.o;
+
+  for (const filePath of files) {
+    try {
+      const parsed = parseFile(filePath);
+      const result = parsed.lines
+        .map(line => applyFilters(line, filterNames))
+        .join('\n');
+
+      if (outputDir) {
+        const fileName = path.basename(filePath);
+        const outputPath = path.join(outputDir, fileName);
+        writeFile(outputPath, result);
+        logger.info(`Processed: ${filePath} -> ${outputPath}`);
+      } else {
+        console.log(`=== ${filePath} ===`);
+        console.log(result);
+        console.log('');
+      }
+    } catch (error) {
+      logger.error(`Failed to process ${filePath}: ${error.message}`);
+    }
+  }
+}
+
 module.exports = {
-  transform
+  transform,
+  batchTransform
 };

@@ -3,7 +3,7 @@
  */
 
 const assert = require('assert');
-const { parseFile, parseContent, normalizeLineEndings } = require('../../src/parser');
+const { parseFile, parseContent, normalizeLineEndings, getStats } = require('../../src/parser');
 const path = require('path');
 const fs = require('fs');
 
@@ -11,56 +11,82 @@ const fs = require('fs');
 const testFilePath = path.join(__dirname, 'test-input.txt');
 const testContent = 'Line 1\nLine 2\nLine 3';
 
-describe('Parser Module', () => {
-  before(() => {
-    fs.writeFileSync(testFilePath, testContent);
-  });
+function runTests() {
+  console.log('Running Parser Module Tests...\n');
 
-  after(() => {
-    if (fs.existsSync(testFilePath)) {
-      fs.unlinkSync(testFilePath);
-    }
-  });
+  // Test parseContent
+  console.log('Test: parseContent should parse simple text content');
+  const result = parseContent('Hello\nWorld');
+  assert.strictEqual(result.lineCount, 2);
+  assert.strictEqual(result.wordCount, 2);
+  console.log('  ✓ Passed\n');
 
-  describe('parseContent', () => {
-    it('should parse simple text content', () => {
-      const result = parseContent('Hello\nWorld');
-      assert.strictEqual(result.lineCount, 2);
-      assert.strictEqual(result.charCount, 11);
-    });
+  console.log('Test: parseContent should handle empty content');
+  const emptyResult = parseContent('');
+  assert.strictEqual(emptyResult.lineCount, 1);
+  assert.strictEqual(emptyResult.charCount, 0);
+  console.log('  ✓ Passed\n');
 
-    it('should handle empty content', () => {
-      const result = parseContent('');
-      assert.strictEqual(result.lineCount, 1);
-      assert.strictEqual(result.charCount, 0);
-    });
-  });
+  console.log('Test: parseContent should count words correctly');
+  const wordResult = parseContent('one two three four');
+  assert.strictEqual(wordResult.wordCount, 4);
+  console.log('  ✓ Passed\n');
 
-  describe('normalizeLineEndings', () => {
-    it('should normalize Windows line endings', () => {
-      const result = normalizeLineEndings('Line1\r\nLine2');
-      assert.strictEqual(result.length, 2);
-    });
+  // Test normalizeLineEndings
+  console.log('Test: normalizeLineEndings should normalize Windows line endings');
+  const windowsResult = normalizeLineEndings('Line1\r\nLine2');
+  assert.strictEqual(windowsResult.length, 2);
+  console.log('  ✓ Passed\n');
 
-    it('should normalize old Mac line endings', () => {
-      const result = normalizeLineEndings('Line1\rLine2');
-      assert.strictEqual(result.length, 2);
-    });
-  });
+  console.log('Test: normalizeLineEndings should normalize old Mac line endings');
+  const macResult = normalizeLineEndings('Line1\rLine2');
+  assert.strictEqual(macResult.length, 2);
+  console.log('  ✓ Passed\n');
 
-  describe('parseFile', () => {
-    it('should parse a file successfully', () => {
-      const result = parseFile(testFilePath);
-      assert.strictEqual(result.lineCount, 3);
-      assert.ok(result.path.endsWith('test-input.txt'));
-    });
+  // Test parseFile
+  fs.writeFileSync(testFilePath, testContent);
+  
+  console.log('Test: parseFile should parse a file successfully');
+  const fileResult = parseFile(testFilePath);
+  assert.strictEqual(fileResult.lineCount, 3);
+  assert.strictEqual(fileResult.wordCount, 6);
+  assert.ok(fileResult.path.endsWith('test-input.txt'));
+  console.log('  ✓ Passed\n');
 
-    it('should throw error for non-existent file', () => {
-      assert.throws(() => {
-        parseFile('non-existent-file.txt');
-      }, /File not found/);
-    });
-  });
-});
+  console.log('Test: parseFile should throw error for non-existent file');
+  try {
+    parseFile('non-existent-file.txt');
+    assert.fail('Should have thrown');
+  } catch (error) {
+    assert.ok(error.message.includes('File not found'));
+  }
+  console.log('  ✓ Passed\n');
 
-console.log('Parser unit tests passed! ✓');
+  console.log('Test: parseFile should include content in result');
+  assert.strictEqual(fileResult.content, testContent);
+  console.log('  ✓ Passed\n');
+
+  // Test getStats
+  console.log('Test: getStats should return file statistics');
+  const stats = getStats(testFilePath);
+  assert.strictEqual(stats.lines, 3);
+  assert.strictEqual(stats.words, 6);
+  assert.ok(stats.file.endsWith('test-input.txt'));
+  console.log('  ✓ Passed\n');
+
+  console.log('Test: getStats should count empty lines');
+  const emptyFile = path.join(__dirname, 'test-empty.txt');
+  fs.writeFileSync(emptyFile, 'Line1\n\nLine3');
+  const emptyStats = getStats(emptyFile);
+  assert.strictEqual(emptyStats.emptyLines, 1);
+  assert.strictEqual(emptyStats.codeLines, 2);
+  fs.unlinkSync(emptyFile);
+  console.log('  ✓ Passed\n');
+
+  // Cleanup
+  fs.unlinkSync(testFilePath);
+
+  console.log('✅ All parser unit tests passed!\n');
+}
+
+runTests();
