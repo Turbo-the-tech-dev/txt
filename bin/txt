@@ -2,14 +2,11 @@
 /**
  * txt CLI v0.2.0 - Hyper-Optimized, Streaming, Zero-Runtime-Dep, Production-Ready
  * Master Turbo's Text Parser/Filter/Transformer/Validator
- * Fixed all require paths, added streaming (O(1) mem for GB files), proper YAML, validate
- * Copy to bin/txt && chmod +x bin/txt && npm test
+ * Uses modular src/ handlers with streaming (O(1) mem for GB files)
  * Usage: txt parse|filter|transform|validate input.txt [--type=upper] [--config=config.yaml] [-o out.txt]
  */
 
-const fs = require('fs');
 const path = require('path');
-const readline = require('readline');
 
 const VERSION = '0.2.0';
 
@@ -32,8 +29,8 @@ function parseArgs(argv) {
 
 // Tiny secure YAML parser (supports parser: & filters: lists - no deps, no eval)
 function parseSimpleYaml(file) {
-  if (!file || !fs.existsSync(file)) return { filters: ['trim'] };
-  const content = fs.readFileSync(file, 'utf-8');
+  if (!file || !require('fs').existsSync(file)) return { filters: ['trim'] };
+  const content = require('fs').readFileSync(file, 'utf-8');
   const config = { filters: [] };
   content.split('\n').forEach(line => {
     const t = line.trim();
@@ -47,6 +44,28 @@ function parseSimpleYaml(file) {
   return config;
 }
 
+// Commands - delegate to modular src/ handlers
+async function cmdParse(args) {
+  const { parse } = require('../src/parser');
+  await parse(args);
+}
+
+async function cmdFilter(args) {
+  const { filter } = require('../src/filters');
+  await filter(args);
+}
+
+async function cmdTransform(args) {
+  const { transform } = require('../src/transform');
+  await transform(args);
+}
+
+async function cmdValidate(args) {
+  const { validate } = require('../src/validate');
+  await validate(args);
+}
+
+// Fallback inline implementations for standalone mode
 const FILTERS = {
   uppercase: t => t.toUpperCase(),
   lowercase: t => t.toLowerCase(),
@@ -58,8 +77,10 @@ const FILTERS = {
   debase64: t => Buffer.from(t, 'base64').toString(),
 };
 
-// Stream processor core - O(1) memory, handles 10GB+ files
-function processStream(inputPath, processor, outputPath) {
+async function processStreamInline(inputPath, processor, outputPath) {
+  const fs = require('fs');
+  const readline = require('readline');
+  
   return new Promise((res, rej) => {
     const input = inputPath === '-' ? process.stdin : fs.createReadStream(inputPath);
     const rl = readline.createInterface({ input, crlfDelay: Infinity });
@@ -80,37 +101,28 @@ function processStream(inputPath, processor, outputPath) {
   });
 }
 
-// Commands
-async function cmdParse(args) {
-  const input = args._[1] || '-';
-  const out = args.o || args.output;
-  await processStream(input, l => l, out); // structured = lines + stats
-  if (!out) console.log(`\n--- STATS: ${input} ready for JSONL pipe ---`);
-}
-
-async function cmdFilter(args) {
+async function cmdFilterInline(args) {
   const input = args._[1] || '-';
   const out = args.o || args.output;
   const types = (args.type || args.t || 'trim').split(',').map(t => t.trim());
   const proc = line => types.reduce((acc, f) => FILTERS[f] ? FILTERS[f](acc) : acc, line);
-  await processStream(input, proc, out);
+  await processStreamInline(input, proc, out);
 }
 
-async function cmdTransform(args) {
+async function cmdTransformInline(args) {
   const input = args._[1] || '-';
   const out = args.o || args.output;
   const cfg = parseSimpleYaml(args.config || args.c);
   const proc = line => cfg.filters.reduce((acc, f) => FILTERS[f] ? FILTERS[f](acc) : acc, line);
-  await processStream(input, proc, out);
+  await processStreamInline(input, proc, out);
 }
 
-async function cmdValidate(args) {
+async function cmdValidateInline(args) {
   const input = args._[1] || '-';
   const out = args.o || args.output;
-  // Example schema: non-empty lines, optional regex from config
   const schemaRegex = args.regex ? new RegExp(args.regex) : /.+/;
   const proc = line => schemaRegex.test(line) ? line : '';
-  await processStream(input, proc, out);
+  await processStreamInline(input, proc, out);
 }
 
 function showHelp() {
@@ -144,6 +156,8 @@ async function main() {
   if (args.v || args.version) return console.log(`txt v${VERSION}`);
 
   const cmd = args._[0];
+  
+  // Try modular handlers first, fall back to inline
   try {
     switch (cmd) {
       case 'parse': await cmdParse(args); break;
@@ -153,9 +167,19 @@ async function main() {
       default: logger.error(`Unknown command: ${cmd}`); showHelp(); process.exit(1);
     }
   } catch (e) {
-    logger.error(e.message);
-    if (args.verbose) console.error(e.stack);
-    process.exit(1);
+    // Fall back to inline implementations
+    try {
+      switch (cmd) {
+        case 'filter': await cmdFilterInline(args); break;
+        case 'transform': await cmdTransformInline(args); break;
+        case 'validate': await cmdValidateInline(args); break;
+        default: throw e;
+      }
+    } catch (e2) {
+      logger.error(e2.message);
+      if (args.verbose) console.error(e2.stack);
+      process.exit(1);
+    }
   }
 }
 

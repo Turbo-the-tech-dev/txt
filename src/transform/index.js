@@ -1,25 +1,42 @@
 /**
- * Transform module - Text transformation engine
+ * src/transform/index.js - v0.2.0 STREAMING UPGRADE (O(1) mem, readline core)
+ * DROP-IN: keeps all your exports/API; replaces parseFile with streaming
+ * Handles stdin ('-'), --output, GB-scale files; update bin/txt: await transform(args)
  */
 
+const fs = require('fs');
 const path = require('path');
-const { parseFile } = require('../parser');
-const { applyFilters } = require('../filters');
-const { logger, writeFile } = require('../utils');
-const { loadConfig } = require('../utils/config');
+const readline = require('readline');
 
 /**
- * Transform command handler
- * @param {Object} args - Command line arguments
+ * Streaming processor - O(1) memory, handles GB-scale files
  */
-function transform(args) {
-  const inputFile = args._[1];
-  const configFile = args.config || args.c;
+async function processStream(inputPath, processor, outputPath) {
+  const input = inputPath === '-' ? process.stdin : fs.createReadStream(inputPath);
+  const rl = readline.createInterface({ input, crlfDelay: Infinity });
+  const outStream = outputPath ? fs.createWriteStream(outputPath) : process.stdout;
+  let lineCount = 0;
 
-  if (!inputFile) {
-    logger.error('Input file required');
-    process.exit(1);
+  for await (const line of rl) {
+    const processed = processor(line);
+    outStream.write(processed + '\n');
+    lineCount++;
   }
+
+  if (outputPath) outStream.end();
+  console.log(`[INFO] Processed ${lineCount} lines`);
+}
+
+/**
+ * Transform command handler - STREAMING
+ */
+async function transform(args) {
+  const { logger } = require('../utils');
+  const { loadConfig } = require('../utils/config');
+
+  const inputFile = args._[1] || '-';
+  const configFile = args.config || args.c;
+  const outputPath = args.output || args.o;
 
   let config = { filters: ['trim'] };
 
@@ -32,26 +49,21 @@ function transform(args) {
     }
   }
 
-  const parsed = parseFile(inputFile);
   const filterNames = config.filters || ['trim'];
+  const { applyFilters } = require('../filters');
+  const proc = line => applyFilters(line, filterNames);
 
-  const result = parsed.lines
-    .map(line => applyFilters(line, filterNames))
-    .join('\n');
-
-  if (args.output || args.o) {
-    writeFile(args.output || args.o, result);
-    logger.info(`Output written to ${args.output || args.o}`);
-  } else {
-    console.log(result);
-  }
+  await processStream(inputFile, proc, outputPath);
 }
 
 /**
- * Batch transform multiple files
- * @param {Object} args - Command line arguments
+ * Batch transform multiple files - STREAMING
  */
-function batchTransform(args) {
+async function batchTransform(args) {
+  const { logger } = require('../utils');
+  const { loadConfig } = require('../utils/config');
+  const { applyFilters } = require('../filters');
+
   const configPath = args.config || args.c;
   const files = args._.slice(1);
 
@@ -78,20 +90,17 @@ function batchTransform(args) {
 
   for (const filePath of files) {
     try {
-      const parsed = parseFile(filePath);
-      const result = parsed.lines
-        .map(line => applyFilters(line, filterNames))
-        .join('\n');
+      const outputPath = outputDir 
+        ? path.join(outputDir, path.basename(filePath))
+        : null;
 
-      if (outputDir) {
-        const fileName = path.basename(filePath);
-        const outputPath = path.join(outputDir, fileName);
-        writeFile(outputPath, result);
+      const proc = line => applyFilters(line, filterNames);
+      await processStream(filePath, proc, outputPath);
+
+      if (outputPath) {
         logger.info(`Processed: ${filePath} -> ${outputPath}`);
       } else {
         console.log(`=== ${filePath} ===`);
-        console.log(result);
-        console.log('');
       }
     } catch (error) {
       logger.error(`Failed to process ${filePath}: ${error.message}`);
@@ -101,5 +110,6 @@ function batchTransform(args) {
 
 module.exports = {
   transform,
-  batchTransform
+  batchTransform,
+  processStream
 };

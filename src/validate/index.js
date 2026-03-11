@@ -1,9 +1,11 @@
 /**
- * Validate module - Text validation against schemas/rules
+ * src/validate/index.js - v0.2.0 STREAMING UPGRADE (O(1) mem, readline core)
+ * DROP-IN: keeps all your exports/API; replaces parseFile with streaming
+ * Handles stdin ('-'), --output, GB-scale files; update bin/txt: await validate(args)
  */
 
-const { parseFile } = require('../parser');
-const { logger } = require('../utils');
+const fs = require('fs');
+const readline = require('readline');
 
 /**
  * Built-in validation rules
@@ -51,12 +53,13 @@ function validateLine(text, rules) {
 }
 
 /**
- * Validate entire file against schema
+ * Validate entire file against schema (non-streaming, for full report)
  * @param {string} filePath - Path to file
  * @param {Object} schema - Validation schema
  * @returns {Object} Validation result
  */
 function validateFile(filePath, schema) {
+  const { parseFile } = require('../parser');
   const parsed = parseFile(filePath);
   const results = {
     file: filePath,
@@ -107,22 +110,48 @@ function validateFile(filePath, schema) {
 }
 
 /**
- * Validate command handler
- * @param {Object} args - Command line arguments
+ * Streaming processor for validation - O(1) memory
+ * Outputs only valid lines (or invalid lines with --invert)
  */
-function validate(args) {
-  const inputFile = args._[1];
-  const schemaPath = args.schema || args.s;
+async function processStream(inputPath, validator, outputPath) {
+  const input = inputPath === '-' ? process.stdin : fs.createReadStream(inputPath);
+  const rl = readline.createInterface({ input, crlfDelay: Infinity });
+  const outStream = outputPath ? fs.createWriteStream(outputPath) : process.stdout;
+  let lineCount = 0;
+  let validCount = 0;
+  let invalidCount = 0;
 
-  if (!inputFile) {
-    logger.error('Input file required');
-    process.exit(1);
+  for await (const line of rl) {
+    const result = validator(line, lineCount + 1);
+    if (result.valid) {
+      outStream.write(line + '\n');
+      validCount++;
+    } else {
+      invalidCount++;
+    }
+    lineCount++;
   }
+
+  if (outputPath) outStream.end();
+  console.log(`[INFO] Validated ${lineCount} lines: ${validCount} valid, ${invalidCount} invalid`);
+  
+  return { lineCount, validCount, invalidCount };
+}
+
+/**
+ * Validate command handler - STREAMING
+ */
+async function validate(args) {
+  const { logger } = require('../utils');
+  const { loadConfig } = require('../utils/config');
+
+  const inputFile = args._[1] || '-';
+  const schemaPath = args.schema || args.s;
+  const outputPath = args.output || args.o;
 
   let schema = {};
 
   if (schemaPath) {
-    const { loadConfig } = require('../utils/config');
     try {
       schema = loadConfig(schemaPath);
     } catch (error) {
@@ -138,42 +167,34 @@ function validate(args) {
     };
   }
 
-  const results = validateFile(inputFile, schema);
+  const lineRules = schema.lines || {};
+  const invert = args.invert || args.v;
 
-  // Output results
+  // Streaming validation - outputs valid lines
+  const stats = await processStream(inputFile, (line, lineNum) => {
+    const result = validateLine(line, lineRules);
+    return invert ? { valid: !result.valid } : result;
+  }, outputPath);
+
+  // For full report, use JSON mode
   if (args.json || args.j) {
+    const results = {
+      file: inputFile,
+      valid: stats.invalidCount === 0,
+      lineCount: stats.lineCount,
+      validCount: stats.validCount,
+      invalidCount: stats.invalidCount
+    };
     console.log(JSON.stringify(results, null, 2));
-  } else {
-    console.log(`\n📄 File: ${results.file}`);
-    console.log(`Status: ${results.valid ? '✅ Valid' : '❌ Invalid'}`);
-
-    if (results.globalErrors.length > 0) {
-      console.log('\n🔴 Global errors:');
-      results.globalErrors.forEach(e => console.log(`   - ${e}`));
-    }
-
-    if (results.lineResults.length > 0) {
-      console.log(`\n🔴 Line errors (${results.lineResults.length} lines):`);
-      results.lineResults.slice(0, 10).forEach(r => {
-        console.log(`   Line ${r.line}: ${r.errors.join(', ')}`);
-        console.log(`      "${r.content}"`);
-      });
-      if (results.lineResults.length > 10) {
-        console.log(`   ... and ${results.lineResults.length - 10} more`);
-      }
-    }
-
-    if (results.valid && results.globalErrors.length === 0 && results.lineResults.length === 0) {
-      console.log('\n✨ All validations passed!');
-    }
   }
 
-  process.exit(results.valid ? 0 : 1);
+  process.exit(stats.invalidCount === 0 ? 0 : 1);
 }
 
 module.exports = {
   validators,
   validateLine,
   validateFile,
-  validate
+  validate,
+  processStream
 };
