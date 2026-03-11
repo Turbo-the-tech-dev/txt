@@ -1,0 +1,5 @@
+module.exports = {
+  env: { node: true, mocha: true, es2021: true },
+  extends: "eslint:recommended",
+  rules: { "no-console": "off", "no-unused-vars": "warn" }
+};

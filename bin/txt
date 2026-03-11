@@ -13,11 +13,10 @@
  *   help       Show help information
  */
 
-const { parseArgs } = require('../src/utils/args.js');
-const { parse } = require('../src/parser/index.js');
-const { filter } = require('../src/filters/index.js');
+const { parseArgs, logger } = require('../src/utils/index.js');
+const { parseFile: parse } = require('../src/parser/index.js');
+const { applyFilters: filter } = require('../src/filters/index.js');
 const { transform } = require('../src/transform/index.js');
-const { logger } = require('../src/utils/logger.js');
 
 const VERSION = '0.1.0';
 
