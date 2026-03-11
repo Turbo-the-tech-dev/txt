@@ -1,68 +1,23 @@
 /**
  * Config module - YAML/JSON config parsing
+ * Uses native yaml package for full YAML spec support
  */
 
 const fs = require('fs');
 const path = require('path');
+const YAML = require('yaml');
 
 /**
- * Simple YAML parser (supports basic key-value, arrays, nested objects)
+ * Parse YAML content using yaml package (full spec support)
  * @param {string} yaml - YAML content
  * @returns {Object} Parsed object
  */
 function parseYaml(yaml) {
-  const result = {};
-  const lines = yaml.split('\n');
-  const stack = [{ obj: result, indent: -1 }];
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    
-    // Skip empty lines and comments
-    if (!trimmed || trimmed.startsWith('#')) continue;
-
-    const indent = line.search(/\S/);
-    const isListItem = trimmed.startsWith('- ');
-
-    // Pop stack until we find parent level
-    while (stack.length > 1 && stack[stack.length - 1].indent >= indent) {
-      stack.pop();
-    }
-
-    const current = stack[stack.length - 1].obj;
-
-    if (isListItem) {
-      const value = trimmed.slice(2).trim();
-      if (Array.isArray(current)) {
-        current.push(parseValue(value));
-      }
-    } else {
-      const colonIndex = trimmed.indexOf(':');
-      if (colonIndex === -1) continue;
-
-      const key = trimmed.slice(0, colonIndex).trim();
-      const value = trimmed.slice(colonIndex + 1).trim();
-
-      if (value === '') {
-        // Check if next line is a list or object
-        const nextLine = lines[lines.indexOf(line) + 1];
-        if (nextLine && nextLine.trim().startsWith('- ')) {
-          current[key] = [];
-        } else {
-          current[key] = {};
-        }
-        stack.push({ obj: current[key], indent });
-      } else {
-        current[key] = parseValue(value);
-      }
-    }
-  }
-
-  return result;
+  return YAML.parse(yaml);
 }
 
 /**
- * Parse a YAML value to appropriate type
+ * Parse a YAML value to appropriate type (for inline use)
  * @param {string} value - Value string
  * @returns {*} Parsed value
  */

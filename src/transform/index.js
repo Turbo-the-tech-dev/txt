@@ -1,15 +1,18 @@
 /**
- * src/transform/index.js - v0.2.0 STREAMING UPGRADE (O(1) mem, readline core)
- * DROP-IN: keeps all your exports/API; replaces parseFile with streaming
- * Handles stdin ('-'), --output, GB-scale files; update bin/txt: await transform(args)
+ * src/transform/index.js - v0.2.0 YAML-DRIVEN STREAMING TRANSFORM (O(1) mem)
+ * Drop-in: requires `npm install yaml` (add to package.json deps: "yaml": "^2.6.0")
+ * Uses loadConfig + applyFilters + inline processStream (shared later)
+ * Handles full spec: parser.encoding, filters array (string or {name})
+ * Update bin/txt: const { transform } = require('../src/transform'); await transform(args);
  */
 
 const fs = require('fs');
-const path = require('path');
 const readline = require('readline');
+const { loadConfig } = require('../utils/config');
+const { applyFilters } = require('../filters/index');
 
 /**
- * Streaming processor - O(1) memory, handles GB-scale files
+ * Shared streaming core (dupe for now; extract to utils/processor.js next)
  */
 async function processStream(inputPath, processor, outputPath) {
   const input = inputPath === '-' ? process.stdin : fs.createReadStream(inputPath);
@@ -24,36 +27,26 @@ async function processStream(inputPath, processor, outputPath) {
   }
 
   if (outputPath) outStream.end();
-  console.log(`[INFO] Processed ${lineCount} lines`);
+  console.log(`[INFO] Transformed ${lineCount} lines`);
 }
 
 /**
- * Transform command handler - STREAMING
+ * Transform command handler - full YAML config + streaming
  */
 async function transform(args) {
   const { logger } = require('../utils');
-  const { loadConfig } = require('../utils/config');
 
   const inputFile = args._[1] || '-';
-  const configFile = args.config || args.c;
-  const outputPath = args.output || args.o;
+  const cfg = loadConfig(args.config || args.c);
 
-  let config = { filters: ['trim'] };
-
-  if (configFile) {
-    try {
-      config = loadConfig(configFile);
-    } catch (error) {
-      logger.error(`Failed to parse config: ${error.message}`);
-      process.exit(1);
-    }
+  if (!cfg.filters || !cfg.filters.length) {
+    logger.warn('No filters in config; using default [trim]');
+    cfg.filters = ['trim'];
   }
 
-  const filterNames = config.filters || ['trim'];
-  const { applyFilters } = require('../filters');
-  const proc = line => applyFilters(line, filterNames);
+  const proc = line => applyFilters(line, cfg.filters);
 
-  await processStream(inputFile, proc, outputPath);
+  await processStream(inputFile, proc, args.output || args.o);
 }
 
 /**
@@ -61,8 +54,7 @@ async function transform(args) {
  */
 async function batchTransform(args) {
   const { logger } = require('../utils');
-  const { loadConfig } = require('../utils/config');
-  const { applyFilters } = require('../filters');
+  const path = require('path');
 
   const configPath = args.config || args.c;
   const files = args._.slice(1);
@@ -77,15 +69,11 @@ async function batchTransform(args) {
     process.exit(1);
   }
 
-  let config;
-  try {
-    config = loadConfig(configPath);
-  } catch (error) {
-    logger.error(`Failed to parse config: ${error.message}`);
-    process.exit(1);
+  const cfg = loadConfig(configPath);
+  if (!cfg.filters || !cfg.filters.length) {
+    cfg.filters = ['trim'];
   }
 
-  const filterNames = config.filters || ['trim'];
   const outputDir = args.output || args.o;
 
   for (const filePath of files) {
@@ -94,7 +82,7 @@ async function batchTransform(args) {
         ? path.join(outputDir, path.basename(filePath))
         : null;
 
-      const proc = line => applyFilters(line, filterNames);
+      const proc = line => applyFilters(line, cfg.filters);
       await processStream(filePath, proc, outputPath);
 
       if (outputPath) {
