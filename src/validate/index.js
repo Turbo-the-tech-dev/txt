@@ -1,200 +1,134 @@
 /**
- * src/validate/index.js - v0.2.0 STREAMING UPGRADE (O(1) mem, readline core)
- * DROP-IN: keeps all your exports/API; replaces parseFile with streaming
- * Handles stdin ('-'), --output, GB-scale files; update bin/txt: await validate(args)
+ * src/validate/index.js - YAML SCHEMA VALIDATION v1.0 (lightweight rule engine, streaming O(1) mem)
+ * Drop-in: npm install yaml (already in deps); supports pre_filters + rules array
+ * Schema YAML example:
+ * validation:
+ *   pre_filters: [trim, lowercase]
+ *   rules:
+ *     - type: pattern
+ *       pattern: ^[A-Z0-9_]+$
+ *       message: "Must be uppercase alphanum"
+ *     - type: length
+ *       min: 3
+ *       max: 500
+ *     - type: enum
+ *       values: ["ERROR", "WARN", "INFO"]
+ *     - type: prefix
+ *       value: "LOG_"
+ *   on_invalid: skip  # skip | warn | fail
+ * Update bin/txt: const { validate } = require('../src/validate'); await validate(args);
  */
 
 const fs = require('fs');
 const readline = require('readline');
+const YAML = require('yaml');
+const { applyFilters } = require('../filters/index');
 
-/**
- * Built-in validation rules
- */
-const validators = {
-  maxLength: (text, max) => text.length <= max,
-  minLength: (text, min) => text.length >= min,
-  maxWords: (text, max) => text.split(/\s+/).filter(w => w).length <= max,
-  minWords: (text, min) => text.split(/\s+/).filter(w => w).length >= min,
-  matches: (text, pattern) => new RegExp(pattern).test(text),
-  notEmpty: (text) => text.trim().length > 0,
-  isEmail: (text) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text),
-  isUrl: (text) => /^https?:\/\/.+$/.test(text),
-  isNumber: (text) => /^-?\d+(\.\d+)?$/.test(text.trim()),
-  noTabs: (text) => !text.includes('\t'),
-  noTrailingWhitespace: (text) => !/\s+$/.test(text),
-  maxLines: (content, max, parsed) => parsed.lineCount <= max,
-  minLines: (content, min, parsed) => parsed.lineCount >= min
+const DEFAULT_SCHEMA = {
+  pre_filters: ['trim'],
+  rules: [],
+  on_invalid: 'skip'
 };
 
 /**
- * Validate a single line against rules
- * @param {string} text - Text to validate
- * @param {Object} rules - Validation rules
- * @returns {Object} Validation result
+ * Load + normalize YAML validation schema
  */
-function validateLine(text, rules) {
-  const errors = [];
-  const warnings = [];
-
-  for (const [ruleName, ruleValue] of Object.entries(rules)) {
-    const validator = validators[ruleName];
-    if (!validator) {
-      warnings.push(`Unknown rule: ${ruleName}`);
-      continue;
-    }
-
-    const isValid = validator(text, ruleValue);
-    if (!isValid) {
-      errors.push(`Failed: ${ruleName} (expected: ${ruleValue})`);
-    }
+function loadSchema(schemaPath) {
+  if (!schemaPath || !fs.existsSync(schemaPath)) {
+    console.warn('[WARN] No schema provided, using empty rules (all lines pass)');
+    return DEFAULT_SCHEMA;
   }
-
-  return { valid: errors.length === 0, errors, warnings };
+  try {
+    const raw = YAML.parse(fs.readFileSync(schemaPath, 'utf8')) || {};
+    const schema = { ...DEFAULT_SCHEMA, ...(raw.validation || raw) };
+    if (!Array.isArray(schema.rules)) schema.rules = [];
+    schema.pre_filters = Array.isArray(schema.pre_filters) ? schema.pre_filters : ['trim'];
+    return schema;
+  } catch (err) {
+    console.error(`[ERROR] YAML schema parse failed: ${schemaPath} -> ${err.message}`);
+    process.exit(1);
+  }
 }
 
 /**
- * Validate entire file against schema (non-streaming, for full report)
- * @param {string} filePath - Path to file
- * @param {Object} schema - Validation schema
- * @returns {Object} Validation result
+ * Rule engine - returns {valid: bool, error?: string}
  */
-function validateFile(filePath, schema) {
-  const { parseFile } = require('../parser');
-  const parsed = parseFile(filePath);
-  const results = {
-    file: filePath,
-    valid: true,
-    lineResults: [],
-    globalErrors: [],
-    globalWarnings: []
-  };
-
-  // Global rules (apply to entire file)
-  const globalRules = schema.global || {};
-  for (const [ruleName, ruleValue] of Object.entries(globalRules)) {
-    const validator = validators[ruleName];
-    if (!validator) {
-      results.globalWarnings.push(`Unknown rule: ${ruleName}`);
-      continue;
-    }
-
-    const isValid = validator(parsed.content, ruleValue, parsed);
-    if (!isValid) {
-      results.globalErrors.push(`Failed: ${ruleName} (expected: ${ruleValue})`);
-      results.valid = false;
-    }
-  }
-
-  // Line-level rules
-  const lineRules = schema.lines || {};
-
-  for (let i = 0; i < parsed.lines.length; i++) {
-    const line = parsed.lines[i];
-    const lineResult = validateLine(line, lineRules);
-
-    if (!lineResult.valid) {
-      results.valid = false;
-      results.lineResults.push({
-        line: i + 1,
-        content: line.slice(0, 50) + (line.length > 50 ? '...' : ''),
-        errors: lineResult.errors
-      });
+function validateLine(line, rules) {
+  for (const rule of rules) {
+    switch (rule.type) {
+      case 'pattern':
+        if (!new RegExp(rule.pattern).test(line)) return { valid: false, error: rule.message || `Failed pattern: ${rule.pattern}` };
+        break;
+      case 'length':
+        if (rule.min !== undefined && line.length < rule.min) return { valid: false, error: `Too short (min ${rule.min})` };
+        if (rule.max !== undefined && line.length > rule.max) return { valid: false, error: `Too long (max ${rule.max})` };
+        break;
+      case 'notEmpty':
+        if (!line) return { valid: false, error: 'Empty line' };
+        break;
+      case 'enum':
+        if (!rule.values.includes(line)) return { valid: false, error: `Not in enum: ${rule.values.join(', ')}` };
+        break;
+      case 'prefix':
+        if (!line.startsWith(rule.value)) return { valid: false, error: `Missing prefix: ${rule.value}` };
+        break;
+      case 'suffix':
+        if (!line.endsWith(rule.value)) return { valid: false, error: `Missing suffix: ${rule.value}` };
+        break;
+      default:
+        console.warn(`[WARN] Unknown rule type: ${rule.type}`);
     }
   }
-
-  results.globalWarnings.push(...results.lineResults
-    .flatMap(r => r.errors)
-    .filter(e => e.includes('Unknown rule')));
-
-  return results;
+  return { valid: true };
 }
 
 /**
- * Streaming processor for validation - O(1) memory
- * Outputs only valid lines (or invalid lines with --invert)
+ * Shared streaming core - O(1) memory
  */
-async function processStream(inputPath, validator, outputPath) {
+async function processStream(inputPath, processor, outputPath) {
   const input = inputPath === '-' ? process.stdin : fs.createReadStream(inputPath);
   const rl = readline.createInterface({ input, crlfDelay: Infinity });
   const outStream = outputPath ? fs.createWriteStream(outputPath) : process.stdout;
-  let lineCount = 0;
-  let validCount = 0;
-  let invalidCount = 0;
+  let total = 0, valid = 0, invalid = 0;
 
   for await (const line of rl) {
-    const result = validator(line, lineCount + 1);
-    if (result.valid) {
+    total++;
+    const processed = processor(line);
+    if (processed.valid) {
       outStream.write(line + '\n');
-      validCount++;
+      valid++;
     } else {
-      invalidCount++;
+      invalid++;
+      if (processed.onInvalid === 'fail') {
+        console.error(`[FAIL] Line ${total}: ${processed.error}`);
+        process.exit(1);
+      } else if (processed.onInvalid === 'warn') {
+        console.warn(`[WARN] Line ${total}: ${processed.error}`);
+      }
+      // skip: do nothing
     }
-    lineCount++;
   }
 
   if (outputPath) outStream.end();
-  console.log(`[INFO] Validated ${lineCount} lines: ${validCount} valid, ${invalidCount} invalid`);
-  
-  return { lineCount, validCount, invalidCount };
+  console.log(`[INFO] Validated ${valid}/${total} lines`);
 }
 
 /**
- * Validate command handler - STREAMING
+ * Validate command handler - full YAML schema + streaming
  */
 async function validate(args) {
-  const { logger } = require('../utils');
-  const { loadConfig } = require('../utils/config');
-
   const inputFile = args._[1] || '-';
-  const schemaPath = args.schema || args.s;
-  const outputPath = args.output || args.o;
+  const schemaPath = args.schema || args.s || args.config || args.c;
+  const schema = loadSchema(schemaPath);
 
-  let schema = {};
+  const preProc = line => applyFilters(line, schema.pre_filters);
+  const proc = rawLine => {
+    const line = preProc(rawLine);
+    const result = validateLine(line, schema.rules);
+    return { ...result, onInvalid: schema.on_invalid };
+  };
 
-  if (schemaPath) {
-    try {
-      schema = loadConfig(schemaPath);
-    } catch (error) {
-      logger.error(`Failed to load schema: ${error.message}`);
-      process.exit(1);
-    }
-  } else {
-    // Default schema for common text validation
-    schema = {
-      lines: {
-        notEmpty: true
-      }
-    };
-  }
-
-  const lineRules = schema.lines || {};
-  const invert = args.invert || args.v;
-
-  // Streaming validation - outputs valid lines
-  const stats = await processStream(inputFile, (line, lineNum) => {
-    const result = validateLine(line, lineRules);
-    return invert ? { valid: !result.valid } : result;
-  }, outputPath);
-
-  // For full report, use JSON mode
-  if (args.json || args.j) {
-    const results = {
-      file: inputFile,
-      valid: stats.invalidCount === 0,
-      lineCount: stats.lineCount,
-      validCount: stats.validCount,
-      invalidCount: stats.invalidCount
-    };
-    console.log(JSON.stringify(results, null, 2));
-  }
-
-  process.exit(stats.invalidCount === 0 ? 0 : 1);
+  await processStream(inputFile, proc, args.output || args.o);
 }
 
-module.exports = {
-  validators,
-  validateLine,
-  validateFile,
-  validate,
-  processStream
-};
+module.exports = { validate, loadSchema, validateLine };
