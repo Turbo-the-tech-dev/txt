@@ -7,14 +7,9 @@
  */
 
 const path = require('path');
+const { logger } = require('../src/utils');
 
 const VERSION = '0.2.1';
-
-const logger = {
-  info: m => console.log(`[INFO] ${m}`),
-  error: m => { console.error(`[ERROR] ${m}`); process.exit(1); },
-  warn: m => console.warn(`[WARN] ${m}`),
-};
 
 function parseArgs(argv) {
   const args = { _: [] };

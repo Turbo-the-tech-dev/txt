@@ -3,13 +3,30 @@
  */
 
 /**
- * Simple logger utility
+ * ANSI color codes & icons
+ */
+const colors = {
+  reset: '\x1b[0m',
+  cyan: '\x1b[36m',
+  yellow: '\x1b[33m',
+  red: '\x1b[31m',
+  dim: '\x1b[2m'
+};
+const icons = {
+  info: 'ℹ ',
+  warn: '⚠ ',
+  error: '✖ ',
+  debug: '⚙ '
+};
+
+/**
+ * Simple colorized logger utility
  */
 const logger = {
-  info: (msg) => console.log(`[INFO] ${msg}`),
-  warn: (msg) => console.warn(`[WARN] ${msg}`),
-  error: (msg) => console.error(`[ERROR] ${msg}`),
-  debug: (msg) => console.debug(`[DEBUG] ${msg}`)
+  info: (msg) => console.log(`${colors.cyan}${icons.info}[INFO]${colors.reset} ${msg}`),
+  warn: (msg) => console.warn(`${colors.yellow}${icons.warn}[WARN]${colors.reset} ${msg}`),
+  error: (msg) => console.error(`${colors.red}${icons.error}[ERROR]${colors.reset} ${msg}`),
+  debug: (msg) => console.debug(`${colors.dim}${icons.debug}[DEBUG]${colors.reset} ${msg}`)
 };
 
 /**
