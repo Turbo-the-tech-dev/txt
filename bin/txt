@@ -55,6 +55,31 @@ async function cmdValidate(args) {
   await validate(args);
 }
 
+async function cmdSearch(args) {
+  const { search } = require('../src/filters');
+  await search(args);
+}
+
+async function cmdNumber(args) {
+  const { numberLines } = require('../src/filters');
+  await numberLines(args);
+}
+
+async function cmdCount(args) {
+  const { count } = require('../src/count');
+  await count(args);
+}
+
+async function cmdStats(args) {
+  const { stats } = require('../src/count');
+  await stats(args);
+}
+
+async function cmdDuplicates(args) {
+  const { findDuplicates } = require('../src/count');
+  await findDuplicates(args);
+}
+
 // Fallback inline implementations for standalone mode
 const FILTERS = {
   uppercase: t => t.toUpperCase(),
@@ -147,6 +172,10 @@ async function main() {
   if (args.v || args.version) return console.log(`txt v${VERSION}`);
 
   const cmd = args._[0];
+  if (!cmd) {
+    showHelp();
+    process.exit(1);
+  }
   
   // Try modular handlers first, fall back to inline
   try {
@@ -155,6 +184,12 @@ async function main() {
       case 'filter': await cmdFilter(args); break;
       case 'transform': await cmdTransform(args); break;
       case 'validate': await cmdValidate(args); break;
+      case 'search': await cmdSearch(args); break;
+      case 'number': await cmdNumber(args); break;
+      case 'count': await cmdCount(args); break;
+      case 'stats': await cmdStats(args); break;
+      case 'duplicates': await cmdDuplicates(args); break;
+      case 'help': showHelp(); break;
       default: logger.error(`Unknown command: ${cmd}`); showHelp(); process.exit(1);
     }
   } catch (e) {
