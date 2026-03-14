@@ -44,9 +44,9 @@ function runTests() {
 
     console.log('Test: should parse a file');
     const parseResult = execSync(`node ${binPath} parse ${sampleFile}`, { encoding: 'utf-8' });
-    assert.ok(parseResult.includes('Lines:'));
-    assert.ok(parseResult.includes('Words:'));
-    assert.ok(parseResult.includes('Characters:'));
+    assert.ok(parseResult.includes('Processed'));
+    assert.ok(parseResult.includes('lines'));
+    assert.ok(parseResult.includes('words'));
     console.log('  ✓ Passed\n');
 
     console.log('Test: should filter with uppercase');

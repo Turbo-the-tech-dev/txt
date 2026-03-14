@@ -56,7 +56,9 @@ function parseFile(filePath, options = {}) {
   }
 
   const content = fs.readFileSync(filePath, encoding);
-  return parseContent(content, { encoding, lineEnding });
+  const result = parseContent(content, { encoding, lineEnding });
+  result.path = filePath;
+  return result;
 }
 
 /**

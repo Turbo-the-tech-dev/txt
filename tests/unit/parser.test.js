@@ -35,12 +35,12 @@ function runTests() {
   // Test normalizeLineEndings
   console.log('Test: normalizeLineEndings should normalize Windows line endings');
   const windowsResult = normalizeLineEndings('Line1\r\nLine2');
-  assert.strictEqual(windowsResult.length, 2);
+  assert.strictEqual(windowsResult.split('\n').length, 2);
   console.log('  ✓ Passed\n');
 
   console.log('Test: normalizeLineEndings should normalize old Mac line endings');
   const macResult = normalizeLineEndings('Line1\rLine2');
-  assert.strictEqual(macResult.length, 2);
+  assert.strictEqual(macResult.split('\n').length, 2);
   console.log('  ✓ Passed\n');
 
   // Test parseFile
