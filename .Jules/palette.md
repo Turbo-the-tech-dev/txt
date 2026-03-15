@@ -1,0 +1,3 @@
+## 2025-05-14 - Accessible Code Copy Buttons
+**Learning:** In documentation layouts using 'overflow-x: auto' for code blocks, absolutely positioned children like 'Copy' buttons will scroll horizontally with the content if not handled carefully; alternative wrapping or fixed-positioning relative to a non-scrolling parent is required for stable positioning. Additionally, interactive elements like 'Copy' buttons must be visible on `:focus-visible` to be keyboard-accessible.
+**Action:** Always wrap code blocks in a `position: relative` container and ensure action buttons are reachable and visible via keyboard navigation.
